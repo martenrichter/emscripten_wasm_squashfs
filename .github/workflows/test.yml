@@ -31,7 +31,7 @@ jobs:
 
       - name: Build and run test
         working-directory: ${{github.workspace}}/emscripten-wasm-squashfs/test
-        run: run_test.sh
+        run: ./run_test.sh
 
 
       
