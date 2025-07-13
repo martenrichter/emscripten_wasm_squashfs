@@ -1,3 +1,4 @@
+[![Run build and test](https://github.com/martenrichter/emscripten_wasm_squashfs/actions/workflows/test.yml/badge.svg)](https://github.com/martenrichter/emscripten_wasm_squashfs/actions/workflows/test.yml)
 # Emscripten wasm SquashFS
 (c) 2025 - Marten Richter
 
