@@ -1,3 +1,4 @@
 *.pyc
 test/wasmfs_squashfs.js
 test/wasmfs_squashfs.wasm
+__pycache__

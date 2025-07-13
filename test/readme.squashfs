@@ -1,6 +1,7 @@
-The example squash fs file is generate with the following command from libsquashfs-ng:
+The example squash fs file is generate with the following commands from libsquashfs-ng:
 
-gensquashfs -b 4096 -c gzip -D squashfs_example squashfs_example.sqshfs
+gensquashfs -b 4096 -c gzip -D squashfs_example squashfs_example_gzip.sqshfs
+gensquashfs -b 4096 -c zstd -D squashfs_example squashfs_example_zstd.sqshfs
 
 The block size is chosen to be as small as possible to support multiple blocks with a small
  example file. It is not a recommendation for usage.
