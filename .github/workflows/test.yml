@@ -1,0 +1,40 @@
+name: Run build and test
+# inspired by emscripten-glfw github action so portions copied
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout ports
+        uses: actions/checkout@v4
+        with:
+          path: emscripten-wasm-squashfs
+
+      - name: Checkout emscripten
+        uses: actions/checkout@v4
+        with:
+          repository: emscripten-core/emsdk
+          path: emscripten
+
+      - name: Install Emscripten
+        working-directory: ${{github.workspace}}/emscripten
+        run: |
+          ./emsdk install latest
+          ./emsdk activate latest
+          source ./emsdk_env.sh
+          emcc -v
+
+      - name: Build and run test
+        working-directory: ${{github.workspace}}/emscripten-wasm-squashfs/test
+        run: run_test.sh
+
+
+      
+
+      
+
