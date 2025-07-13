@@ -1,13 +1,13 @@
-Create backend from /squashfs_example.sqsh...allocation success!
+Create backend from /squashfs_example_zstd.sqshfs...allocation success!
 mount done!
 Now iterate over all files and print their contents
-Enter directory: /squashfs
+Enter directory: /squashfs_zstd
 Process entry: Folder2
-New entry: /squashfs/Folder2
-Enter directory: /squashfs/Folder2
+New entry: /squashfs_zstd/Folder2
+Enter directory: /squashfs_zstd/Folder2
 Process entry: justanothertxtfile
-New entry: /squashfs/Folder2/justanothertxtfile
-Print file: /squashfs/Folder2/justanothertxtfile
+New entry: /squashfs_zstd/Folder2/justanothertxtfile
+Print file: /squashfs_zstd/Folder2/justanothertxtfile
 ------------
 What comes to my mind? Nothing special about text files?
 Maybe some latex:
@@ -16,8 +16,8 @@ $H=\hbar \omega a^\dagger a $
 ------------
 Finish entry: justanothertxtfile
 Process entry: testfile.txt
-New entry: /squashfs/Folder2/testfile.txt
-Print file: /squashfs/Folder2/testfile.txt
+New entry: /squashfs_zstd/Folder2/testfile.txt
+Print file: /squashfs_zstd/Folder2/testfile.txt
 ------------
 What should we write!
 
@@ -27,41 +27,41 @@ Exotic characters ÖÄÜß?aêéáà
 
 ------------
 Finish entry: testfile.txt
-Exit directory: /squashfs/Folder2
+Exit directory: /squashfs_zstd/Folder2
 Finish entry: Folder2
 Process entry: folder1
-New entry: /squashfs/folder1
-Enter directory: /squashfs/folder1
+New entry: /squashfs_zstd/folder1
+Enter directory: /squashfs_zstd/folder1
 Process entry: subfoldera
-New entry: /squashfs/folder1/subfoldera
-Enter directory: /squashfs/folder1/subfoldera
+New entry: /squashfs_zstd/folder1/subfoldera
+Enter directory: /squashfs_zstd/folder1/subfoldera
 Process entry: testmeagain
-New entry: /squashfs/folder1/subfoldera/testmeagain
-Print file: /squashfs/folder1/subfoldera/testmeagain
+New entry: /squashfs_zstd/folder1/subfoldera/testmeagain
+Print file: /squashfs_zstd/folder1/subfoldera/testmeagain
 ------------
 Lalala!
 
 ------------
 Finish entry: testmeagain
-Exit directory: /squashfs/folder1/subfoldera
+Exit directory: /squashfs_zstd/folder1/subfoldera
 Finish entry: subfoldera
 Process entry: subfolderb
-New entry: /squashfs/folder1/subfolderb
-Enter directory: /squashfs/folder1/subfolderb
-Exit directory: /squashfs/folder1/subfolderb
+New entry: /squashfs_zstd/folder1/subfolderb
+Enter directory: /squashfs_zstd/folder1/subfolderb
+Exit directory: /squashfs_zstd/folder1/subfolderb
 Finish entry: subfolderb
-Exit directory: /squashfs/folder1
+Exit directory: /squashfs_zstd/folder1
 Finish entry: folder1
 Process entry: othertestfile2.txt
-New entry: /squashfs/othertestfile2.txt
-Print file: /squashfs/othertestfile2.txt
+New entry: /squashfs_zstd/othertestfile2.txt
+Print file: /squashfs_zstd/othertestfile2.txt
 ------------
 Just some text, nothing special!
 ------------
 Finish entry: othertestfile2.txt
 Process entry: roottest1.txt
-New entry: /squashfs/roottest1.txt
-Print file: /squashfs/roottest1.txt
+New entry: /squashfs_zstd/roottest1.txt
+Print file: /squashfs_zstd/roottest1.txt
 ------------
 Traditional blind text exceeding 8Kbyte and thus two frames if frame size is 8KB
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
@@ -184,8 +184,8 @@ End
 ------------
 Finish entry: roottest1.txt
 Process entry: symtestfile.txt
-New entry: /squashfs/symtestfile.txt
-Print file: /squashfs/symtestfile.txt
+New entry: /squashfs_zstd/symtestfile.txt
+Print file: /squashfs_zstd/symtestfile.txt
 ------------
 What should we write!
 
@@ -196,8 +196,8 @@ Exotic characters ÖÄÜß?aêéáà
 ------------
 Finish entry: symtestfile.txt
 Process entry: testfile.txt
-New entry: /squashfs/testfile.txt
-Print file: /squashfs/testfile.txt
+New entry: /squashfs_zstd/testfile.txt
+Print file: /squashfs_zstd/testfile.txt
 ------------
 What should we write!
 
@@ -207,5 +207,5 @@ Exotic characters ÖÄÜß?aêéáà
 
 ------------
 Finish entry: testfile.txt
-Exit directory: /squashfs
+Exit directory: /squashfs_zstd
 Iteration finished!

@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - 'master'
+  pull_request:
+    branches:
+      - 'master'
 
 jobs:
   build:
+    name: Build and test
     runs-on: ubuntu-latest
 
     steps:
@@ -29,11 +33,17 @@ jobs:
           source ./emsdk_env.sh
           emcc -v
 
-      - name: Build and run test
+      - name: Build and run test for gzip
         working-directory: ${{github.workspace}}/emscripten-wasm-squashfs/test
         run: |
           source ${{github.workspace}}/emscripten/emsdk_env.sh
-          ./run_test.sh
+          ./run_test_gzip.sh
+
+      - name: Build and run test for zstd
+        working-directory: ${{github.workspace}}/emscripten-wasm-squashfs/test
+        run: |
+          source ${{github.workspace}}/emscripten/emsdk_env.sh
+          ./run_test_zstd.sh
 
 
       

@@ -61,18 +61,51 @@ void iterateDirs(const char* oldPath) {
 }
 
 int main(int argc, char** argv) {
-  printf("Create backend from /squashfs_example.sqsh...");
-  backend_t squashFSBackend =
-    wasmfs_create_squashfs_backend("/squashfs_example.sqshfs");
-  assert(squashFSBackend != NULL);
-  printf("allocation success!\n");
-  // now mount it in the file system
-  int ret = wasmfs_create_directory(
-    "/squashfs", S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
-  assert(ret == 0);
-  printf("mount done!\n");
-  printf("Now iterate over all files and print their contents\n");
-  iterateDirs("/squashfs");
-  printf("Iteration finished!\n");
+  {
+#ifdef TEST_COMPRESSIONS_GZIP
+    printf("Create backend from /squashfs_example_gzip.sqshfs...");
+    backend_t squashFSBackend =
+        wasmfs_create_squashfs_backend("/squashfs_example_gzip.sqshfs");
+    if (squashFSBackend == NULL) {
+      printf("Backend creation failed\n");
+      return 1;
+    }
+    printf("allocation success!\n");
+    // now mount it in the file system
+    int ret = wasmfs_create_directory(
+        "/squashfs_gzip", S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
+    if (ret != 0) {
+      printf("Directory creation failed\n");
+      return 1;
+    }
+    printf("mount done!\n");
+    printf("Now iterate over all files and print their contents\n");
+    iterateDirs("/squashfs_gzip");
+    printf("Iteration finished!\n");
+#endif
+  }
+  {
+#ifdef TEST_COMPRESSIONS_ZSTD
+    printf("Create backend from /squashfs_example_zstd.sqshfs...");fflush(stdout);
+    backend_t squashFSBackend =
+        wasmfs_create_squashfs_backend("/squashfs_example_zstd.sqshfs");
+    if (squashFSBackend == NULL) {
+      printf("Backend creation failed\n");
+      return 1;
+    }
+    printf("allocation success!\n");
+    // now mount it in the file system
+    int ret = wasmfs_create_directory(
+        "/squashfs_zstd", S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
+    if (ret != 0) {
+      printf("Directory creation failed\n");
+      return 1;
+    }
+    printf("mount done!\n");
+    printf("Now iterate over all files and print their contents\n");
+    iterateDirs("/squashfs_zstd");
+    printf("Iteration finished!\n");
+#endif
+  }
   return 0;
 }

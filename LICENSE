@@ -76,3 +76,5 @@ https://github.com/AgentD/squashfs-tools-ng/
 or
 https://infraroot.at/pub/squashfs/
 
+The port of Zstandard (zstd), used by libsquashfs for Zstandard support,
+ links your project with zstd, which is dual-licensed under BSD or GPLv2
