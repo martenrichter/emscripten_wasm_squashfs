@@ -121,6 +121,7 @@ namespace
       inited = false;
       sqfs_file_t *file;
       int ret = open_js(&file, props);
+      printf("mark 1 openjs"); fflush(stdout);
       if (ret != 0)
       {
         // TODO: How can I pass errors from the backend
@@ -133,6 +134,7 @@ namespace
     {
 
       fsFile = file;
+       printf("mark init 1"); fflush(stdout);
 
       /* read super block*/
       if (sqfs_super_read(&superBlock, fsFile))
@@ -140,12 +142,14 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
+      printf("mark init 2"); fflush(stdout);
 
       sqfs_compressor_config_init(
           &compressorCfg,
           static_cast<SQFS_COMPRESSOR>(superBlock.compression_id),
           superBlock.block_size,
           SQFS_COMP_FLAG_UNCOMPRESS);
+      printf("mark init 3"); fflush(stdout);
 
       int ret = sqfs_compressor_create(&compressorCfg, &compressor);
       if (ret != 0)
@@ -159,6 +163,7 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
+      printf("mark init 4"); fflush(stdout);
 
       if (sqfs_id_table_read(idTable, fsFile, &superBlock, compressor))
       {
@@ -178,6 +183,7 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
+      printf("mark init 5"); fflush(stdout);
 
       ret = sqfs_data_reader_load_fragment_table(dataReader, &superBlock);
       if (ret != 0)
@@ -185,6 +191,7 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
+      printf("mark init 6"); fflush(stdout);
       inited = true;
     }
 

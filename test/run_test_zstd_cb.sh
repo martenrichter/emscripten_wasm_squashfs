@@ -19,4 +19,4 @@ if ! node wasmfs_squashfs.js | diff -u - wasmfs_squashfs_zstd_cb.out; then
     
     exit 1
 fi
-echo "Success for zstd!"
+echo "Success for zstd cb!"

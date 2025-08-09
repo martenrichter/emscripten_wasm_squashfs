@@ -14,4 +14,4 @@ if ! node wasmfs_squashfs.js | diff -u - wasmfs_squashfs_gzip_cb.out; then
     
     exit 1
 fi
-echo "Success for gzip!"
+echo "Success for gzip cb!"
