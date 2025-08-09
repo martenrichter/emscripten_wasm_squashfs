@@ -3,6 +3,8 @@
 set -e
 echo "Clear cache"
 emcc --clear-cache
+echo "Check node version..."
+node --version
 echo "Building test..."
 emcc wasmfs_squashfs.cc -o wasmfs_squashfs.js -sENVIRONMENT=node -O2 -sWASMFS  --embed-file squashfs_example_zstd.sqshfs \
                                          -DTEST_COMPRESSIONS_ZSTD --use-port=../ports/libzstd.py \
