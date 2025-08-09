@@ -67,11 +67,11 @@ EM_JS(emscripten::EM_VAL, getProps, (const char* name), {
   const fsprom = require('fs/promises');
   const jsName = UTF8ToString(name);
   const props = {};
-  const fileHandle = fsprom.open(jsName, 'r');
   try {
     let stats = fs.statSync(jsName);
     props.size = stats.size;
     props.callback = async (offset, buffer, size) => {
+      const fileHandle = fsprom.open(jsName, 'r');
       console.log("read debug", offset, buffer, size);
       const handle = await fileHandle;
       try {
