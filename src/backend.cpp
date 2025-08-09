@@ -56,14 +56,13 @@ namespace
                           void *buffer, size_t size)
     {
       sqfs_file_js_t *file = (sqfs_file_js_t *)base;
-       printf("read1"); fflush(stdout);
+
       if (offset + size > file->size)
       {
         return SQFS_ERROR_OUT_OF_BOUNDS;
       }
-      printf("read2"); fflush(stdout);
+
       int ret = file->callback(offset, (uintptr_t)buffer, size).await().as<int>();
-      printf("read3 %d", ret); fflush(stdout);
       return ret;
     }
 
@@ -124,7 +123,6 @@ namespace
       inited = false;
       sqfs_file_t *file;
       int ret = open_js(&file, props);
-      printf("mark 1 openjs"); fflush(stdout);
       if (ret != 0)
       {
         // TODO: How can I pass errors from the backend
@@ -137,7 +135,6 @@ namespace
     {
 
       fsFile = file;
-       printf("mark init 1"); fflush(stdout);
 
       /* read super block*/
       if (sqfs_super_read(&superBlock, fsFile))
@@ -145,14 +142,12 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
-      printf("mark init 2"); fflush(stdout);
 
       sqfs_compressor_config_init(
           &compressorCfg,
           static_cast<SQFS_COMPRESSOR>(superBlock.compression_id),
           superBlock.block_size,
           SQFS_COMP_FLAG_UNCOMPRESS);
-      printf("mark init 3"); fflush(stdout);
 
       int ret = sqfs_compressor_create(&compressorCfg, &compressor);
       if (ret != 0)
@@ -166,22 +161,18 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
-      printf("mark init 4 i"); fflush(stdout);
 
       if ((ret = sqfs_id_table_read(idTable, fsFile, &superBlock, compressor)))
       {
         // TODO: How can I pass errors from the backend
-        printf("id table problem %d\n", ret);
         return;
       }
-      printf("mark init 4 ii"); fflush(stdout);
       dirReader = sqfs_dir_reader_create(&superBlock, compressor, fsFile, 0);
       if (dirReader == nullptr)
       {
         // TODO: How can I pass errors from the backend
         return;
       }
-      printf("mark init 4 iii"); fflush(stdout);
       dataReader =
           sqfs_data_reader_create(fsFile, superBlock.block_size, compressor, 0);
       if (dataReader == nullptr)
@@ -189,7 +180,6 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
-      printf("mark init 5"); fflush(stdout);
 
       ret = sqfs_data_reader_load_fragment_table(dataReader, &superBlock);
       if (ret != 0)
@@ -197,7 +187,6 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
-      printf("mark init 6"); fflush(stdout);
       inited = true;
     }
 
