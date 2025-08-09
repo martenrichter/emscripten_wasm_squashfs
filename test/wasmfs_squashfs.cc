@@ -72,6 +72,7 @@ EM_JS(emscripten::EM_VAL, getProps, (const char* name), {
     let stats = fs.statSync(jsName);
     props.size = stats.size;
     props.callback = async (offset, buffer, size) => {
+      console.log("read debug", offset, buffer, size);
       const handle = await fileHandle;
       try {
         const result = await handle.read(HEAPU8, buffer, size, offset);

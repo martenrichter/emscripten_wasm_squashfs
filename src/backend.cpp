@@ -168,9 +168,10 @@ namespace
       }
       printf("mark init 4 i"); fflush(stdout);
 
-      if (sqfs_id_table_read(idTable, fsFile, &superBlock, compressor))
+      if (ret = sqfs_id_table_read(idTable, fsFile, &superBlock, compressor))
       {
         // TODO: How can I pass errors from the backend
+        printf("id table problem %d\n", ret);
         return;
       }
       printf("mark init 4 ii"); fflush(stdout);
