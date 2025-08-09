@@ -56,11 +56,14 @@ namespace
                           void *buffer, size_t size)
     {
       sqfs_file_js_t *file = (sqfs_file_js_t *)base;
+       printf("read1"); fflush(stdout);
       if (offset + size > file->size)
       {
         return SQFS_ERROR_OUT_OF_BOUNDS;
       }
+      printf("read2"); fflush(stdout);
       int ret = file->callback(offset, (uintptr_t)buffer, size).await().as<int>();
+      printf("read3 %d", ret); fflush(stdout);
       return ret;
     }
 
