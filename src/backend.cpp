@@ -4,6 +4,7 @@
 // found in the LICENSE file.
 
 #include "backend.h"
+#include "sqfs/predef.h"
 #include "sqfs/compressor.h"
 #include "sqfs/data_reader.h"
 #include "sqfs/dir.h"
@@ -12,12 +13,75 @@
 #include "sqfs/inode.h"
 #include "sqfs/io.h"
 #include "sqfs/super.h"
+#include "sqfs/error.h"
 #include "wasmfs.h"
+#include <emscripten/val.h>
+#include <emscripten/wire.h>
 
 using namespace wasmfs;
 
 namespace
 {
+
+  extern "C"
+  {
+    // helper functions for js based sqfs file, all heavily inspired by the original implementation of libsqfs
+    typedef struct
+    {
+      sqfs_file_t base;
+      sqfs_u64 size;
+      emscripten::val callback; // index to js reading function
+    } sqfs_file_js_t;
+
+    static void js_destroy(sqfs_object_t *base)
+    {
+      sqfs_file_js_t *file = (sqfs_file_js_t *)base;
+      free(file);
+    }
+
+    static sqfs_object_t *js_copy(const sqfs_object_t *base)
+    {
+      const sqfs_file_js_t *file = (const sqfs_file_js_t *)base;
+      sqfs_file_js_t *copy;
+      size_t size;
+      copy = (sqfs_file_js_t *)calloc(1, sizeof(*file));
+      if (copy == NULL)
+        return NULL;
+
+      *copy = *file;
+      return (sqfs_object_t *)copy;
+    }
+
+    static int js_read_at(sqfs_file_t *base, sqfs_u64 offset,
+                          void *buffer, size_t size)
+    {
+      sqfs_file_js_t *file = (sqfs_file_js_t *)base;
+      if (offset + size > file->size)
+      {
+        return SQFS_ERROR_OUT_OF_BOUNDS;
+      }
+      int ret = file->callback(offset, (uintptr_t)buffer, size).await().as<int>();
+      return ret;
+    }
+
+    static int js_write_at(sqfs_file_t *base, sqfs_u64 offset,
+                           const void *buffer, size_t size)
+    {
+      return SQFS_ERROR_IO; // only reading
+    }
+
+    static sqfs_u64 js_get_size(const sqfs_file_t *base)
+    {
+      const sqfs_file_js_t *file = (const sqfs_file_js_t *)base;
+
+      return file->size;
+    }
+
+    static int js_truncate(sqfs_file_t *base, sqfs_u64 size)
+    {
+      return SQFS_ERROR_UNSUPPORTED;
+    }
+  }
 
   class SquashFSFile;
   class SquashFSDirectory;
@@ -37,13 +101,38 @@ namespace
       compressor = nullptr;
       idTable = nullptr;
       dirReader = nullptr;
-
-      fsFile = sqfs_open_file(squashFSFile.c_str(), SQFS_FILE_OPEN_READ_ONLY);
-      if (fsFile == nullptr)
+      inited = false;
+      sqfs_file_t *file = sqfs_open_file(squashFSFile.c_str(), SQFS_FILE_OPEN_READ_ONLY);
+      if (file == nullptr)
       {
         // TODO: How can I pass errors from the backend
         return; // stop init we failed
       }
+      init(file);
+    }
+
+    SquashFSBackend(emscripten::val props)
+    {
+      inited = false;
+      fsFile = nullptr;
+      compressor = nullptr;
+      idTable = nullptr;
+      dirReader = nullptr;
+      inited = false;
+      sqfs_file_t *file;
+      int ret = open_js(&file, props);
+      if (ret != 0)
+      {
+        // TODO: How can I pass errors from the backend
+        return; // stop init we failed
+      }
+      init(file);
+    }
+
+    void init(sqfs_file_t *file)
+    {
+
+      fsFile = file;
 
       /* read super block*/
       if (sqfs_super_read(&superBlock, fsFile))
@@ -138,6 +227,37 @@ namespace
     sqfs_dir_reader_t *dirReader;
     sqfs_data_reader_t *dataReader;
     bool inited;
+
+    // again a rewritten version of the squashfs original
+    int open_js(sqfs_file_t **out, emscripten::val props)
+    {
+      sqfs_file_js_t *file;
+      size_t size, namelen;
+      sqfs_file_t *base;
+      int ret;
+
+      *out = nullptr;
+
+      file = (sqfs_file_js_t *)calloc(1, sizeof(*file));
+      base = (sqfs_file_t *)file;
+      if (file == nullptr)
+      {
+        return SQFS_ERROR_ALLOC;
+      }
+      file->size = props["size"].as<size_t>();
+      file->callback = props["callback"];
+
+      base->read_at = js_read_at;
+      base->write_at = js_write_at;
+      base->get_size = js_get_size;
+      base->truncate = js_truncate;
+
+      ((sqfs_object_t *)base)->copy = js_copy;
+      ((sqfs_object_t *)base)->destroy = js_destroy;
+
+      *out = base;
+      return 0;
+    }
   };
 
   class SquashFSFile : public DataFile
@@ -401,3 +521,17 @@ extern "C"
   }
 
 } // extern "C"
+
+backend_t wasmfs_create_squashfs_backend_callback(emscripten::val props)
+{
+  std::unique_ptr<SquashFSBackend> sqFSBackend =
+      std::make_unique<SquashFSBackend>(props);
+  if (sqFSBackend->isInited())
+  {
+    return wasmFS.addBackend(std::move(sqFSBackend));
+  }
+  else
+  {
+    return nullptr;
+  }
+}

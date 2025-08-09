@@ -67,8 +67,6 @@ def get(ports, settings, shared):
       flags.append('-DWITH_GZIP')
     if 'zstd' in compressions:
       flags.append('-DWITH_ZSTD')
-      print("falgs so far", flags)
-    print("compressions and flags", compressions, flags)
     ports.make_pkg_config('libsquashfs', TAG, flags)
     includes = [os.path.join(source_path, 'include')]
     exclude_dirs = ['bin', 'extras', 'common', 'compat', 'fstree', 'io', 'tar', 'win32', 'gensquashfs', 'libio', 'libtar', 'tests']
