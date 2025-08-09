@@ -163,19 +163,21 @@ namespace
         // TODO: How can I pass errors from the backend
         return;
       }
-      printf("mark init 4"); fflush(stdout);
+      printf("mark init 4 i"); fflush(stdout);
 
       if (sqfs_id_table_read(idTable, fsFile, &superBlock, compressor))
       {
         // TODO: How can I pass errors from the backend
         return;
       }
+      printf("mark init 4 ii"); fflush(stdout);
       dirReader = sqfs_dir_reader_create(&superBlock, compressor, fsFile, 0);
       if (dirReader == nullptr)
       {
         // TODO: How can I pass errors from the backend
         return;
       }
+      printf("mark init 4 iii"); fflush(stdout);
       dataReader =
           sqfs_data_reader_create(fsFile, superBlock.block_size, compressor, 0);
       if (dataReader == nullptr)
