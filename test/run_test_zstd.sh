@@ -3,8 +3,9 @@
 set -e
 echo "Clear cache"
 emcc --clear-cache
+NODE=${EMSDK_NODE:-node}
 echo "Check node version..."
-node --version
+"$NODE" --version
 echo "Building test..."
 emcc wasmfs_squashfs.cc -o wasmfs_squashfs.js -sENVIRONMENT=node -O2 -sWASMFS  --embed-file squashfs_example_zstd.sqshfs \
                                          -DTEST_COMPRESSIONS_ZSTD --use-port=../ports/libzstd.py \
@@ -16,7 +17,7 @@ emcc wasmfs_squashfs.cc -o wasmfs_squashfs.js -sENVIRONMENT=node -O2 -sWASMFS  -
 
 echo "Executing test..."
 # Capture output, print it, and compare
-if ! node wasmfs_squashfs.js | diff -u - wasmfs_squashfs_zstd.out; then
+if ! "$NODE" wasmfs_squashfs.js | diff -u - wasmfs_squashfs_zstd.out; then
     echo "Output differs!"
     
     exit 1
