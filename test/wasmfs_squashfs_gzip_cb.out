@@ -1,0 +1,211 @@
+Create backend from /squashfs_example_gzip.sqshfs using a callback into node js...allocation success!
+mount done!
+Now iterate over all files and print their contents
+Enter directory: /squashfs_gzip
+Process entry: Folder2
+New entry: /squashfs_gzip/Folder2
+Enter directory: /squashfs_gzip/Folder2
+Process entry: justanothertxtfile
+New entry: /squashfs_gzip/Folder2/justanothertxtfile
+Print file: /squashfs_gzip/Folder2/justanothertxtfile
+------------
+What comes to my mind? Nothing special about text files?
+Maybe some latex:
+$H=\hbar \omega a^\dagger a $
+
+------------
+Finish entry: justanothertxtfile
+Process entry: testfile.txt
+New entry: /squashfs_gzip/Folder2/testfile.txt
+Print file: /squashfs_gzip/Folder2/testfile.txt
+------------
+What should we write!
+
+More interesting text?
+I just need to fill it.
+Exotic characters ÖÄÜß?aêéáà
+
+------------
+Finish entry: testfile.txt
+Exit directory: /squashfs_gzip/Folder2
+Finish entry: Folder2
+Process entry: folder1
+New entry: /squashfs_gzip/folder1
+Enter directory: /squashfs_gzip/folder1
+Process entry: subfoldera
+New entry: /squashfs_gzip/folder1/subfoldera
+Enter directory: /squashfs_gzip/folder1/subfoldera
+Process entry: testmeagain
+New entry: /squashfs_gzip/folder1/subfoldera/testmeagain
+Print file: /squashfs_gzip/folder1/subfoldera/testmeagain
+------------
+Lalala!
+
+------------
+Finish entry: testmeagain
+Exit directory: /squashfs_gzip/folder1/subfoldera
+Finish entry: subfoldera
+Process entry: subfolderb
+New entry: /squashfs_gzip/folder1/subfolderb
+Enter directory: /squashfs_gzip/folder1/subfolderb
+Exit directory: /squashfs_gzip/folder1/subfolderb
+Finish entry: subfolderb
+Exit directory: /squashfs_gzip/folder1
+Finish entry: folder1
+Process entry: othertestfile2.txt
+New entry: /squashfs_gzip/othertestfile2.txt
+Print file: /squashfs_gzip/othertestfile2.txt
+------------
+Just some text, nothing special!
+------------
+Finish entry: othertestfile2.txt
+Process entry: roottest1.txt
+New entry: /squashfs_gzip/roottest1.txt
+Print file: /squashfs_gzip/roottest1.txt
+------------
+Traditional blind text exceeding 8Kbyte and thus two frames if frame size is 8KB
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus.
+Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed,
+dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper
+congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est
+eleifend mi, non fermentum diam nisl sit amet erat.
+----
+End
+------------
+Finish entry: roottest1.txt
+Process entry: symtestfile.txt
+New entry: /squashfs_gzip/symtestfile.txt
+Print file: /squashfs_gzip/symtestfile.txt
+------------
+What should we write!
+
+More interesting text?
+I just need to fill it.
+Exotic characters ÖÄÜß?aêéáà
+
+------------
+Finish entry: symtestfile.txt
+Process entry: testfile.txt
+New entry: /squashfs_gzip/testfile.txt
+Print file: /squashfs_gzip/testfile.txt
+------------
+What should we write!
+
+More interesting text?
+I just need to fill it.
+Exotic characters ÖÄÜß?aêéáà
+
+------------
+Finish entry: testfile.txt
+Exit directory: /squashfs_gzip
+Iteration finished!

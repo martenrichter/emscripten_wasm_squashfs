@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <emscripten.h>
 #include <emscripten/wasmfs.h>
+#include <emscripten/val.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -60,12 +61,46 @@ void iterateDirs(const char* oldPath) {
   printf("Exit directory: %s\n", oldPath);
 }
 
+#ifdef TEST_CALLBACK
+EM_JS(emscripten::EM_VAL, getProps, (const char* name), {
+  const fs = require('fs');
+  const fsprom = require('fs/promises');
+  const jsName = UTF8ToString(name);
+  const props = {};
+  try {
+    let stats = fs.statSync(jsName);
+    props.size = stats.size;
+    const fileHandle = fsprom.open(jsName, 'r');
+    props.callback = async (offset, buffer, size) => {
+      const handle = await fileHandle;
+      try {
+        const result = await handle.read(HEAPU8, buffer, size, offset);
+      } catch (error) {
+        console.log('Problem reading ', jsName, 'with error', error);
+        return -2; // SQFS IO ERROR
+      }
+      return 0;
+    }
+  } catch (error) {
+    console.log('Problem setting up, fs for', jsName, ":", error);
+  }
+  return Emval.toHandle(props);
+});
+
+#endif
+
 int main(int argc, char** argv) {
   {
 #ifdef TEST_COMPRESSIONS_GZIP
+#ifdef TEST_CALLBACK
+    printf("Create backend from /squashfs_example_gzip.sqshfs using a callback into node js...");
+    emscripten::val props = emscripten::val::take_ownership(getProps("./squashfs_example_gzip.sqshfs"));
+    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(props);
+#else
     printf("Create backend from /squashfs_example_gzip.sqshfs...");
     backend_t squashFSBackend =
         wasmfs_create_squashfs_backend("/squashfs_example_gzip.sqshfs");
+#endif
     if (squashFSBackend == NULL) {
       printf("Backend creation failed\n");
       return 1;
@@ -86,9 +121,15 @@ int main(int argc, char** argv) {
   }
   {
 #ifdef TEST_COMPRESSIONS_ZSTD
+#ifdef TEST_CALLBACK
+    printf("Create backend from /squashfs_example_zstd.sqshfs using a callback into node js...");
+    emscripten::val props = emscripten::val::take_ownership(getProps("./squashfs_example_zstd.sqshfs"));
+    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(props);
+#else
     printf("Create backend from /squashfs_example_zstd.sqshfs...");fflush(stdout);
     backend_t squashFSBackend =
         wasmfs_create_squashfs_backend("/squashfs_example_zstd.sqshfs");
+#endif
     if (squashFSBackend == NULL) {
       printf("Backend creation failed\n");
       return 1;
