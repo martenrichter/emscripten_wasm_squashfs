@@ -75,9 +75,9 @@ EM_JS(emscripten::EM_VAL, getProps, (const char* name), {
       console.log("read debug", offset, buffer, size);
       const handle = await fileHandle;
       try {
-        console.log("read buffer before", new Uint8Array(HEAPU8.buffer, buffer, size));
+        console.log("read buffer before", new Uint8Array(HEAPU8.buffer, buffer, size + 10));
         const result = await handle.read(HEAPU8, buffer, size, offset);
-        console.log("read result", new Uint8Array(HEAPU8.buffer, buffer, size));
+        console.log("read result", new Uint8Array(HEAPU8.buffer, buffer, size + 10));
       } catch (error) {
         console.log('Problem reading ', jsName, 'with error', error);
         return -2; // SQFS IO ERROR
