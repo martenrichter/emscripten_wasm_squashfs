@@ -20,13 +20,15 @@
 #include <unistd.h>
 #include <emscripten_squashfs.h>
 
-void printFile(const char* path) {
-  FILE* file = fopen(path, "rb");
+void printFile(const char *path)
+{
+  FILE *file = fopen(path, "rb");
   printf("Print file: %s\n", path);
   printf("------------\n");
   char buf[4096];
   size_t read = sizeof(buf);
-  while (read == sizeof(buf)) {
+  while (read == sizeof(buf))
+  {
     read = fread(buf, 1, sizeof(buf), file);
     if (read > 0)
       fwrite(buf, 1, read, stdout);
@@ -35,19 +37,23 @@ void printFile(const char* path) {
   printf("\n------------\n");
 }
 
-void iterateDirs(const char* oldPath) {
+void iterateDirs(const char *oldPath)
+{
   printf("Enter directory: %s\n", oldPath);
-  DIR* dir = opendir(oldPath);
+  DIR *dir = opendir(oldPath);
   assert(dir != NULL);
-  struct dirent* entry = readdir(dir);
+  struct dirent *entry = readdir(dir);
   char newPath[PATH_MAX + 1];
-  while (entry) {
-    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+  while (entry)
+  {
+    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+    {
       printf("Process entry: %s\n", entry->d_name);
       snprintf(newPath, sizeof(newPath), "%s/%s", oldPath, entry->d_name);
       printf("New entry: %s\n", newPath);
       struct stat st;
-      if (stat(newPath, &st) >= 0) {
+      if (stat(newPath, &st) >= 0)
+      {
         if (S_ISDIR(st.st_mode))
           iterateDirs(newPath);
         else if (S_ISREG(st.st_mode))
@@ -62,26 +68,33 @@ void iterateDirs(const char* oldPath) {
 }
 
 #ifdef TEST_CALLBACK
-EM_JS(emscripten::EM_VAL, getProps, (const char* name), {
+EM_JS(emscripten::EM_VAL, getProps, (const char *name), {
   const fs = require('fs');
   const fsprom = require('fs/promises');
   const jsName = UTF8ToString(name);
   const props = {};
-  try {
+  try
+  {
     let stats = fs.statSync(jsName);
     props.size = stats.size;
     const fileHandle = fsprom.open(jsName, 'r');
-    props.callback = async (offset, buffer, size) => {
+    props.callback = async(offset, buffer, size) =>
+    {
       const handle = await fileHandle;
-      try {
+      try
+      {
         const result = await handle.read(HEAPU8, buffer, size, offset);
-      } catch (error) {
+      }
+      catch (error)
+      {
         console.log('Problem reading ', jsName, 'with error', error);
         return -2; // SQFS IO ERROR
       }
       return 0;
     }
-  } catch (error) {
+  }
+  catch (error)
+  {
     console.log('Problem setting up, fs for', jsName, ":", error);
   }
   return Emval.toHandle(props);
@@ -89,19 +102,20 @@ EM_JS(emscripten::EM_VAL, getProps, (const char* name), {
 
 #endif
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
   {
 #ifdef TEST_COMPRESSIONS_GZIP
 #ifdef TEST_CALLBACK
     printf("Create backend from /squashfs_example_gzip.sqshfs using a callback into node js...");
-    emscripten::val props = emscripten::val::take_ownership(getProps("./squashfs_example_gzip.sqshfs"));
-    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(props);
+    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(getProps("./squashfs_example_gzip.sqshfs"));
 #else
     printf("Create backend from /squashfs_example_gzip.sqshfs...");
     backend_t squashFSBackend =
         wasmfs_create_squashfs_backend("/squashfs_example_gzip.sqshfs");
 #endif
-    if (squashFSBackend == NULL) {
+    if (squashFSBackend == NULL)
+    {
       printf("Backend creation failed\n");
       return 1;
     }
@@ -109,7 +123,8 @@ int main(int argc, char** argv) {
     // now mount it in the file system
     int ret = wasmfs_create_directory(
         "/squashfs_gzip", S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
-    if (ret != 0) {
+    if (ret != 0)
+    {
       printf("Directory creation failed\n");
       return 1;
     }
@@ -123,14 +138,15 @@ int main(int argc, char** argv) {
 #ifdef TEST_COMPRESSIONS_ZSTD
 #ifdef TEST_CALLBACK
     printf("Create backend from /squashfs_example_zstd.sqshfs using a callback into node js...");
-    emscripten::val props = emscripten::val::take_ownership(getProps("./squashfs_example_zstd.sqshfs"));
-    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(props);
+    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(getProps("./squashfs_example_zstd.sqshfs"));
 #else
-    printf("Create backend from /squashfs_example_zstd.sqshfs...");fflush(stdout);
+    printf("Create backend from /squashfs_example_zstd.sqshfs...");
+    fflush(stdout);
     backend_t squashFSBackend =
         wasmfs_create_squashfs_backend("/squashfs_example_zstd.sqshfs");
 #endif
-    if (squashFSBackend == NULL) {
+    if (squashFSBackend == NULL)
+    {
       printf("Backend creation failed\n");
       return 1;
     }
@@ -138,7 +154,8 @@ int main(int argc, char** argv) {
     // now mount it in the file system
     int ret = wasmfs_create_directory(
         "/squashfs_zstd", S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
-    if (ret != 0) {
+    if (ret != 0)
+    {
       printf("Directory creation failed\n");
       return 1;
     }

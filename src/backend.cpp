@@ -505,30 +505,33 @@ namespace
 
 } // anonymous namespace
 
-backend_t wasmfs_create_squashfs_backend(const char *squashFSFile)
+extern "C"
 {
-  std::unique_ptr<SquashFSBackend> sqFSBackend =
-      std::make_unique<SquashFSBackend>(squashFSFile);
-  if (sqFSBackend->isInited())
+  backend_t wasmfs_create_squashfs_backend(const char *squashFSFile)
   {
-    return wasmFS.addBackend(std::move(sqFSBackend));
+    std::unique_ptr<SquashFSBackend> sqFSBackend =
+        std::make_unique<SquashFSBackend>(squashFSFile);
+    if (sqFSBackend->isInited())
+    {
+      return wasmFS.addBackend(std::move(sqFSBackend));
+    }
+    else
+    {
+      return nullptr;
+    }
   }
-  else
-  {
-    return nullptr;
-  }
-}
 
-backend_t wasmfs_create_squashfs_backend_callback(emscripten::val props)
-{
-  std::unique_ptr<SquashFSBackend> sqFSBackend =
-      std::make_unique<SquashFSBackend>(props);
-  if (sqFSBackend->isInited())
+  backend_t wasmfs_create_squashfs_backend_callback(emscripten::EM_VAL props)
   {
-    return wasmFS.addBackend(std::move(sqFSBackend));
-  }
-  else
-  {
-    return nullptr;
+    std::unique_ptr<SquashFSBackend> sqFSBackend =
+        std::make_unique<SquashFSBackend>(emscripten::val::take_ownership(props));
+    if (sqFSBackend->isInited())
+    {
+      return wasmFS.addBackend(std::move(sqFSBackend));
+    }
+    else
+    {
+      return nullptr;
+    }
   }
 }
