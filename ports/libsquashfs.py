@@ -20,10 +20,12 @@ LICENSE = 'LGPL-3.0-or-later license for libsquashfs, emscripten license for the
 
 OPTIONS = {
   'compressions': 'A comma separated list of compressions (ex: --use-port=libsquashfs:compressions=zlib,zstd)',
+  'nolibdeps' : 'Turn off dependency on compression libs to bring your own lib',
 }
 
 VALID_OPTION_VALUES = {
-  'compressions': ['zlib', 'zstd']
+  'compressions': ['zlib', 'zstd'],
+  'nolibdeps': ['true', 'false'],
 }
 
 variants = {
@@ -34,6 +36,7 @@ variants = {
 
 opts: Dict[str, Set] = {
   'compressions': set(),
+  'nolibdeps': False,
 }
 
 
@@ -92,14 +95,20 @@ def handle_options(options, error_handler):
         if invalid:
             error_handler(f"Invalid compression(s): {', '.join(invalid)}")
         opts['compressions'] = set(values)
+    if 'nolibdeps' in options:
+      invalid = [v for v in values if v not in VALID_OPTION_VALUES['nolibdeps']]
+      if invalid:
+          error_handler(f"Invalid setting for nolibdeps): {', '.join(invalid)}")
+      opts['nolibdeps'] = options['nolibdeps'] == 'true'
 
 
 def process_dependencies(settings):
   compressions = get_compressions()
-  if 'zlib' in compressions:
-    deps.append('zlib')
-  if 'zstd' in compressions:
-    deps.append('libzstd')
+  if not opts['nolibdeps']:
+    if 'zlib' in compressions:
+      deps.append('zlib')
+    if 'zstd' in compressions:
+      deps.append('libzstd')
 
 def show():
   return 'libsquashfs (; LGPL-3.0-or-later license)'
