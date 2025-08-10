@@ -96,9 +96,9 @@ def handle_options(options, error_handler):
             error_handler(f"Invalid compression(s): {', '.join(invalid)}")
         opts['compressions'] = set(values)
     if 'nolibdeps' in options:
-      invalid = [v for v in values if v not in VALID_OPTION_VALUES['nolibdeps']]
-      if invalid:
-          error_handler(f"Invalid setting for nolibdeps): {', '.join(invalid)}")
+      value = options['nolibdeps']
+      if value not in VALID_OPTION_VALUES['nolibdeps']:
+            error_handler(f"Invalid setting for nolibdeps: {value}")
       opts['nolibdeps'] = options['nolibdeps'] == 'true'
 
 
