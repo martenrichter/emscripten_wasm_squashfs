@@ -21,6 +21,7 @@ LICENSE = 'LGPL-3.0-or-later license for libsquashfs, emscripten license for the
 OPTIONS = {
   'compressions': 'A comma separated list of compressions (ex: --use-port=libsquashfs:compressions=zlib,zstd)',
   'nolibdeps' : 'Turn off dependency on compression libs to bring your own lib',
+  'includedir': 'A system include dir, important if nolibdeps is set to true'
 }
 
 VALID_OPTION_VALUES = {
@@ -73,6 +74,8 @@ def get(ports, settings, shared):
     if hasattr(ports, 'make_pkg_config'):
       ports.make_pkg_config('libsquashfs', TAG, flags)
     includes = [os.path.join(source_path, 'include')]
+    if 'includedir' in opts:
+      includes.append(opts['includedir'])
     exclude_dirs = ['bin', 'extras', 'common', 'compat', 'fstree', 'io', 'tar', 'win32', 'gensquashfs', 'libio', 'libtar', 'tests']
     exclude_files = ['lz4.c', 'lzma.c', 'xz.c']
     if 'zstd' not in compressions:
@@ -100,6 +103,8 @@ def handle_options(options, error_handler):
       if value not in VALID_OPTION_VALUES['nolibdeps']:
             error_handler(f"Invalid setting for nolibdeps: {value}")
       opts['nolibdeps'] = options['nolibdeps'] == 'true'
+    if 'includedir' in options:
+      opts['includedir'] = options['includedir']
 
 
 def process_dependencies(settings):
