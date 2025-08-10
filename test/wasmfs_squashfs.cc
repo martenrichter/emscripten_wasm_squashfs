@@ -97,7 +97,7 @@ EM_JS(emscripten::EM_VAL, getProps, (const char *name), {
   {
     console.log('Problem setting up, fs for', jsName, ":", error);
   }
-  return Emval.toHandle(props);
+  return Module.propsToHandle(props);
 });
 
 #endif

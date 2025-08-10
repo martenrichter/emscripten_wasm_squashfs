@@ -17,6 +17,7 @@
 #include "wasmfs.h"
 #include <emscripten/val.h>
 #include <emscripten/wire.h>
+#include <emscripten/bind.h>
 
 using namespace wasmfs;
 
@@ -535,3 +536,14 @@ extern "C"
     }
   }
 }
+
+uintptr_t propsToHandle(emscripten::val value) {
+    emscripten::EM_VAL handle = value.as_handle();
+    emscripten::internal::_emval_incref(handle);
+    return (uintptr_t) handle;
+}
+
+
+EMSCRIPTEN_BINDINGS(wasm_sqshfs) {
+  emscripten::function("propsToHandle", &propsToHandle);
+};
