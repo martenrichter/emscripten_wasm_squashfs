@@ -28,7 +28,8 @@ def get(ports, settings, shared):
     ports.install_headers(source_path)
 #    flags = ['-sUSE_ZLIB', '-DWITH_GZIP', '-Wno-error=incompatible-pointer-types', '-Wno-error=format', '-D_GNU_SOURCE']
     flags = ['-DZSTD_LIB_COMPRESSION=0']
-    ports.make_pkg_config('libzstd', TAG, flags)
+    if hasattr(ports, 'make_pkg_config'):
+      ports.make_pkg_config('libzstd', TAG, flags)
     includes = []
     exclude_dirs = []
     exclude_files = []
