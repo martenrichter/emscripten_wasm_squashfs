@@ -8,7 +8,7 @@ echo "Check node version..."
 "$NODE" --version
 echo "Building test..."
 emcc wasmfs_squashfs.cc -o wasmfs_squashfs.js -sENVIRONMENT=node -O2 -sWASMFS  -DTEST_COMPRESSIONS_GZIP \
-                                             -DTEST_CALLBACK -std=c++11 -sASYNCIFY -lembind \
+                                             -DTEST_CALLBACK -std=c++11 -sASYNCIFY -lembind  -g\
                                          --use-port=../ports/libsquashfs.py:compressions=zlib --use-port=../ports/emscripten_wasm_squashfs.py
 echo "Executing test..."
 # Capture output, print it, and compare

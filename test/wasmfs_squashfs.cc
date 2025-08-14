@@ -68,7 +68,7 @@ void iterateDirs(const char *oldPath)
 }
 
 #ifdef TEST_CALLBACK
-EM_JS(emscripten::EM_VAL, getProps, (const char *name), {
+EM_ASYNC_JS(uintptr_t, getBackend, (const char *name), {
   const fs = require('fs');
   const fsprom = require('fs/promises');
   const jsName = UTF8ToString(name);
@@ -80,6 +80,7 @@ EM_JS(emscripten::EM_VAL, getProps, (const char *name), {
     const fileHandle = fsprom.open(jsName, 'r');
     props.callback = async(offset, buffer, size) =>
     {
+      console.log("readin");
       const handle = await fileHandle;
       try
       {
@@ -90,6 +91,7 @@ EM_JS(emscripten::EM_VAL, getProps, (const char *name), {
         console.log('Problem reading ', jsName, 'with error', error);
         return -2; // SQFS IO ERROR
       }
+      console.log("readout");
       return 0;
     }
   }
@@ -97,7 +99,10 @@ EM_JS(emscripten::EM_VAL, getProps, (const char *name), {
   {
     console.log('Problem setting up, fs for', jsName, ":", error);
   }
-  return Module.propsToHandle(props);
+  console.log('Module', Module);
+  const ret = await  Module.wasmfs_create_squashfs_backend_callback(props);
+  console.log('ret', ret);
+  return ret;
 });
 
 #endif
@@ -107,8 +112,10 @@ int main(int argc, char **argv)
   {
 #ifdef TEST_COMPRESSIONS_GZIP
 #ifdef TEST_CALLBACK
-    printf("Create backend from /squashfs_example_gzip.sqshfs using a callback into node js...");
-    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(getProps("./squashfs_example_gzip.sqshfs"));
+    wasmfs_squashfs_init_callback();
+    printf("Create backend from /squashfs_example_gzip.sqshfs using a callback into node js...");fflush(stdout);
+    backend_t squashFSBackend = (backend_t) getBackend("./squashfs_example_gzip.sqshfs");
+    printf("After get backend! %d\n", squashFSBackend);
 #else
     printf("Create backend from /squashfs_example_gzip.sqshfs...");
     backend_t squashFSBackend =
@@ -137,8 +144,9 @@ int main(int argc, char **argv)
   {
 #ifdef TEST_COMPRESSIONS_ZSTD
 #ifdef TEST_CALLBACK
+    wasmfs_squashfs_init_callback();
     printf("Create backend from /squashfs_example_zstd.sqshfs using a callback into node js...");
-    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(getProps("./squashfs_example_zstd.sqshfs"));
+    backend_t squashFSBackend = (backend_t)getBackend("./squashfs_example_zstd.sqshfs");
 #else
     printf("Create backend from /squashfs_example_zstd.sqshfs...");
     fflush(stdout);
