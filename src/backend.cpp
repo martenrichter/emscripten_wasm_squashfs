@@ -18,6 +18,9 @@
 #include <emscripten/val.h>
 #include <emscripten/wire.h>
 #include <emscripten/bind.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <syscall_arch.h>
 
 using namespace wasmfs;
 
@@ -527,7 +530,7 @@ extern "C"
   }
 
   // forward declaration
-  int wasmfs_create_directory(char* path, int mode, backend_t backend);
+  int wasmfs_create_directory(char *path, int mode, backend_t backend);
 }
 
 EMSCRIPTEN_KEEPALIVE uintptr_t wasmfs_create_squashfs_backend_callback(emscripten::val props)
@@ -552,7 +555,7 @@ EMSCRIPTEN_KEEPALIVE bool wasmfs_create_squashfs_backend_callback_and_mount(emsc
   if (sqFSBackend->isInited())
   {
     backend_t backend = wasmFS.addBackend(std::move(sqFSBackend));
-    int ret = wasmfs_create_directory(const_cast<char*>(path.c_str()), 0777, backend);
+    int ret = wasmfs_create_directory(const_cast<char *>(path.c_str()), 0777, backend);
     if (ret != 0)
       return false;
     else
@@ -564,6 +567,91 @@ EMSCRIPTEN_KEEPALIVE bool wasmfs_create_squashfs_backend_callback_and_mount(emsc
   }
 }
 
+EMSCRIPTEN_KEEPALIVE emscripten::val readDirAsync(std::string path)
+{
+
+  struct dirent **entries;
+  int nentries = scandir(path.c_str(), &entries, NULL, alphasort);
+  if (nentries == -1)
+  {
+    return emscripten::val::undefined();
+  }
+  emscripten::val toret = emscripten::val::array();
+
+  for (int i = 0; i < nentries; i++)
+  {
+    toret.call<void>("push", std::string(entries[i]->d_name));
+  }
+  for (int i = 0; i < nentries; i++)
+  {
+    free(entries[i]);
+  }
+  free(entries);
+  return toret;
+}
+
+EMSCRIPTEN_KEEPALIVE emscripten::val findObjectAsync(std::string path)
+{
+
+  struct stat file;
+  int err = 0;
+  err = stat(path.c_str(), &file);
+  if (err < 0)
+  {
+    return emscripten::val::null();
+  }
+  emscripten::val toret = emscripten::val::object();
+  if (S_ISDIR(file.st_mode))
+  {
+    toret.set("isFolder", true);
+  }
+  else
+  {
+    toret.set("isFolder", false);
+  }
+  if (S_ISREG(file.st_mode))
+  {
+    toret.set("isFile", true);
+  }
+  else
+  {
+    toret.set("isFile", false);
+  }
+  if (S_ISLNK(file.st_mode))
+  {
+    toret.set("isLink", true);
+  }
+  else
+  {
+    toret.set("isLink", false);
+  }
+
+  return toret;
+}
+
+uint8_t fileSignature[4];
+
+EMSCRIPTEN_KEEPALIVE emscripten::val readFileSignAsync(std::string path)
+{
+  int fd = open(path.c_str(), O_RDONLY);
+  if (fd == -1)
+  {
+    return emscripten::val::null();
+  }
+  ssize_t bytesRead = read(fd, fileSignature, 4);
+  close(fd);
+  if (bytesRead == -1)
+  {
+    return emscripten::val::null();
+  }
+  return emscripten::val(emscripten::typed_memory_view(4, fileSignature));
+}
+
+EMSCRIPTEN_KEEPALIVE void symlinkAsync(std::string oldPath, std::string newPath)
+{
+  __syscall_symlinkat((intptr_t)oldPath.c_str(), AT_FDCWD, (intptr_t)newPath.c_str());
+}
+
 EMSCRIPTEN_KEEPALIVE
 EMSCRIPTEN_BINDINGS(wasm_sqshfs)
 {
@@ -571,4 +659,12 @@ EMSCRIPTEN_BINDINGS(wasm_sqshfs)
                        &wasmfs_create_squashfs_backend_callback);
   emscripten::function("wasmfs_create_squashfs_backend_callback_and_mount",
                        &wasmfs_create_squashfs_backend_callback_and_mount);
+  emscripten::function("readDirAsync",
+                       &readDirAsync);
+  emscripten::function("findObjectAsync",
+                       &findObjectAsync);
+  emscripten::function("readFileSignAsync",
+                       &readFileSignAsync);
+  emscripten::function("symlinkAsync",
+                       &symlinkAsync);
 };
