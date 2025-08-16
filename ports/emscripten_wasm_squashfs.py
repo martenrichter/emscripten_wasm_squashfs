@@ -27,7 +27,7 @@ def get(ports, settings, shared):
         source_include_paths = [os.path.join(root_path, 'include'), os.path.join(emscripten_root, 'system', 'lib', 'wasmfs')]
         ports.install_headers(os.path.join(root_path,'include'))
         srcs = [os.path.join(source_path, "backend.cpp")]
-        ports.build_port(source_path, final, port_name, includes=source_include_paths, srcs=srcs)
+        ports.build_port(source_path, final, port_name, includes=source_include_paths, srcs=srcs, flags=[])
     return [shared.cache.get_lib(get_lib_name(settings), create, what='port')]
 
 

@@ -521,29 +521,29 @@ extern "C"
       return nullptr;
     }
   }
-
-  backend_t wasmfs_create_squashfs_backend_callback(emscripten::EM_VAL props)
+  void wasmfs_squashfs_init_callback()
   {
-    std::unique_ptr<SquashFSBackend> sqFSBackend =
-        std::make_unique<SquashFSBackend>(emscripten::val::take_ownership(props));
-    if (sqFSBackend->isInited())
-    {
-      return wasmFS.addBackend(std::move(sqFSBackend));
-    }
-    else
-    {
-      return nullptr;
-    }
+    // we do nothing, it is just ensures, that the lib is not stripped
   }
 }
 
-uintptr_t propsToHandle(emscripten::val value) {
-    emscripten::EM_VAL handle = value.as_handle();
-    emscripten::internal::_emval_incref(handle);
-    return (uintptr_t) handle;
+EMSCRIPTEN_KEEPALIVE uintptr_t wasmfs_create_squashfs_backend_callback(emscripten::val props)
+{
+  std::unique_ptr<SquashFSBackend> sqFSBackend =
+      std::make_unique<SquashFSBackend>(props);
+  if (sqFSBackend->isInited())
+  {
+    return (uintptr_t)wasmFS.addBackend(std::move(sqFSBackend)); //(uintptr_t)
+  }
+  else
+  {
+    return (uintptr_t)nullptr;
+  }
 }
 
-
-EMSCRIPTEN_BINDINGS(wasm_sqshfs) {
-  emscripten::function("propsToHandle", &propsToHandle);
+EMSCRIPTEN_KEEPALIVE
+EMSCRIPTEN_BINDINGS(wasm_sqshfs)
+{
+  emscripten::function("wasmfs_create_squashfs_backend_callback",
+                       &wasmfs_create_squashfs_backend_callback);
 };

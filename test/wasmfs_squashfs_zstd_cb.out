@@ -1,4 +1,5 @@
-Create backend from /squashfs_example_zstd.sqshfs using a callback into node js...allocation success!
+Create backend from ./squashfs_example_zstd.sqshfs using a callback into node js...
+allocation success!
 mount done!
 Now iterate over all files and print their contents
 Enter directory: /squashfs_zstd

@@ -9,7 +9,9 @@
 #include <dirent.h>
 #include <emscripten.h>
 #include <emscripten/wasmfs.h>
-#include <emscripten/val.h>
+#ifdef TEST_CALLBACK
+#include <emscripten/bind.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -67,103 +69,76 @@ void iterateDirs(const char *oldPath)
   printf("Exit directory: %s\n", oldPath);
 }
 
-#ifdef TEST_CALLBACK
-EM_JS(emscripten::EM_VAL, getProps, (const char *name), {
-  const fs = require('fs');
-  const fsprom = require('fs/promises');
-  const jsName = UTF8ToString(name);
-  const props = {};
-  try
-  {
-    let stats = fs.statSync(jsName);
-    props.size = stats.size;
-    const fileHandle = fsprom.open(jsName, 'r');
-    props.callback = async(offset, buffer, size) =>
-    {
-      const handle = await fileHandle;
-      try
-      {
-        const result = await handle.read(HEAPU8, buffer, size, offset);
-      }
-      catch (error)
-      {
-        console.log('Problem reading ', jsName, 'with error', error);
-        return -2; // SQFS IO ERROR
-      }
-      return 0;
-    }
-  }
-  catch (error)
-  {
-    console.log('Problem setting up, fs for', jsName, ":", error);
-  }
-  return Module.propsToHandle(props);
-});
-
-#endif
-
-int main(int argc, char **argv)
+int testBackend(backend_t squashFSBackend, std::string mountpoint)
 {
+  if (squashFSBackend == NULL)
   {
-#ifdef TEST_COMPRESSIONS_GZIP
-#ifdef TEST_CALLBACK
-    printf("Create backend from /squashfs_example_gzip.sqshfs using a callback into node js...");
-    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(getProps("./squashfs_example_gzip.sqshfs"));
-#else
-    printf("Create backend from /squashfs_example_gzip.sqshfs...");
-    backend_t squashFSBackend =
-        wasmfs_create_squashfs_backend("/squashfs_example_gzip.sqshfs");
-#endif
-    if (squashFSBackend == NULL)
-    {
-      printf("Backend creation failed\n");
-      return 1;
-    }
-    printf("allocation success!\n");
-    // now mount it in the file system
-    int ret = wasmfs_create_directory(
-        "/squashfs_gzip", S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
-    if (ret != 0)
-    {
-      printf("Directory creation failed\n");
-      return 1;
-    }
-    printf("mount done!\n");
-    printf("Now iterate over all files and print their contents\n");
-    iterateDirs("/squashfs_gzip");
-    printf("Iteration finished!\n");
-#endif
+    printf("Backend creation failed\n");
+    return 1;
   }
+  printf("allocation success!\n");
+  // now mount it in the file system
+  int ret = wasmfs_create_directory(
+      mountpoint.c_str(), S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
+  if (ret != 0)
   {
-#ifdef TEST_COMPRESSIONS_ZSTD
-#ifdef TEST_CALLBACK
-    printf("Create backend from /squashfs_example_zstd.sqshfs using a callback into node js...");
-    backend_t squashFSBackend = wasmfs_create_squashfs_backend_callback(getProps("./squashfs_example_zstd.sqshfs"));
-#else
-    printf("Create backend from /squashfs_example_zstd.sqshfs...");
-    fflush(stdout);
-    backend_t squashFSBackend =
-        wasmfs_create_squashfs_backend("/squashfs_example_zstd.sqshfs");
-#endif
-    if (squashFSBackend == NULL)
-    {
-      printf("Backend creation failed\n");
-      return 1;
-    }
-    printf("allocation success!\n");
-    // now mount it in the file system
-    int ret = wasmfs_create_directory(
-        "/squashfs_zstd", S_IRUGO | S_IXUGO | S_IWUGO, squashFSBackend);
-    if (ret != 0)
-    {
-      printf("Directory creation failed\n");
-      return 1;
-    }
-    printf("mount done!\n");
-    printf("Now iterate over all files and print their contents\n");
-    iterateDirs("/squashfs_zstd");
-    printf("Iteration finished!\n");
-#endif
+    printf("Directory creation failed\n");
+    return 1;
   }
+  printf("mount done!\n");
+  printf("Now iterate over all files and print their contents\n");
+  iterateDirs(mountpoint.c_str());
+  printf("Iteration finished!\n");
   return 0;
 }
+
+#ifndef TEST_CALLBACK
+backend_t initBackendFromFile(const char *filename)
+{
+  printf("Create backend from %s...", filename);
+  backend_t squashFSBackend =
+      wasmfs_create_squashfs_backend(filename);
+  return squashFSBackend;
+}
+#endif
+
+#ifndef TEST_CALLBACK
+int runTestFile(const char *sqshfsfile, const char *mountpoint)
+{
+  backend_t squashFSBackend = initBackendFromFile(sqshfsfile);
+  return testBackend(squashFSBackend, mountpoint);
+}
+#endif
+
+#ifndef TEST_CALLBACK
+int main(int argc, char **argv)
+{
+#ifdef TEST_COMPRESSIONS_GZIP
+  return runTestFile("/squashfs_example_gzip.sqshfs", "/squashfs_gzip");
+#endif
+#ifdef TEST_COMPRESSIONS_ZSTD
+  return runTestFile("/squashfs_example_zstd.sqshfs", "/squashfs_zstd");
+#endif
+  return 0;
+}
+#else
+int testBackendHelper_(uintptr_t backend_ptr, std::string mountpoint) {
+    return testBackend(reinterpret_cast<backend_t>(backend_ptr), mountpoint);
+}
+
+EMSCRIPTEN_KEEPALIVE
+EMSCRIPTEN_BINDINGS(wasm_sqshfs_test)
+{
+  emscripten::function("testBackend",
+                       &testBackendHelper_,
+                       emscripten::allow_raw_pointers());
+#ifdef TEST_COMPRESSIONS_GZIP
+  emscripten::constant("sqshfsName", std::string("./squashfs_example_gzip.sqshfs"));
+  emscripten::constant("mountPoint", std::string("/squashfs_gzip"));
+#endif
+#ifdef TEST_COMPRESSIONS_ZSTD
+  emscripten::constant("sqshfsName", std::string("./squashfs_example_zstd.sqshfs"));
+  emscripten::constant("mountPoint", std::string("/squashfs_zstd"));
+#endif
+};
+#endif
