@@ -7,7 +7,7 @@ NODE=${EMSDK_NODE:-node}
 echo "Check node version..."
 "$NODE" --version
 echo "Building test..."
-emcc wasmfs_squashfs.cc -o wasmfs_squashfs.js -sENVIRONMENT=node -O2 -sWASMFS  -sEXPORTED_RUNTIME_METHODS='["HEAPU8"]' \
+emcc wasmfs_squashfs.cc -o wasmfs_squashfs.js -sENVIRONMENT=node -O2 -sWASMFS  -sEXPORTED_RUNTIME_METHODS='["HEAPU8"]' -sEXPORTED_FUNCTIONS='["_wasmfs_squashfs_init_callback"]' \
                                          -DTEST_COMPRESSIONS_ZSTD  -DTEST_CALLBACK -std=c++11 --use-port=../ports/libzstd.py -sASYNCIFY -lembind \
                                          -std=c++11 --use-port=../ports/libsquashfs.py:compressions=zstd --use-port=../ports/emscripten_wasm_squashfs.py
 
