@@ -28,6 +28,11 @@ Module.onRuntimeInitialized = async () => {
         console.log("Create backend from", Module.sqshfsName, "using a callback into node js...");
         const backend = await Module.wasmfs_create_squashfs_backend_callback(props);
         await Module.testBackend(backend, Module.mountPoint);
+        console.log('Test readDirAsync:', await Module.readDirAsync(Module.mountPoint));
+        console.log('Test findObjectAsync:', await Module.findObjectAsync(Module.mountPoint + "/Folder2"));
+        console.log('Test findObjectAsync2:', await Module.findObjectAsync(Module.mountPoint + "/roottest1.txt"));
+        console.log('Test findObjectAsync2:', await Module.findObjectAsync(Module.mountPoint + "/roottest1.txt"));
+        console.log('Test readFileSignAsync:', await Module.readFileSignAsync(Module.mountPoint + "/roottest1.txt"));
     } catch (error) {
         console.log('Problem in test', error);
         return null;

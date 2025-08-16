@@ -210,3 +210,17 @@ Exotic characters ÖÄÜß?aêéáà
 Finish entry: testfile.txt
 Exit directory: /squashfs_zstd
 Iteration finished!
+Test readDirAsync: [
+  '.',
+  '..',
+  'Folder2',
+  'folder1',
+  'othertestfile2.txt',
+  'roottest1.txt',
+  'symtestfile.txt',
+  'testfile.txt'
+]
+Test findObjectAsync: { isFolder: true, isFile: false, isLink: false }
+Test findObjectAsync2: { isFolder: false, isFile: true, isLink: false }
+Test findObjectAsync2: { isFolder: false, isFile: true, isLink: false }
+Test readFileSignAsync: Uint8Array(4) [ 84, 114, 97, 100 ]
