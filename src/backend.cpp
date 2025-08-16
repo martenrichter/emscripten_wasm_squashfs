@@ -525,6 +525,9 @@ extern "C"
   {
     // we do nothing, it is just ensures, that the lib is not stripped
   }
+
+  // forward declaration
+  int wasmfs_create_directory(char* path, int mode, backend_t backend);
 }
 
 EMSCRIPTEN_KEEPALIVE uintptr_t wasmfs_create_squashfs_backend_callback(emscripten::val props)
@@ -541,9 +544,31 @@ EMSCRIPTEN_KEEPALIVE uintptr_t wasmfs_create_squashfs_backend_callback(emscripte
   }
 }
 
+EMSCRIPTEN_KEEPALIVE bool wasmfs_create_squashfs_backend_callback_and_mount(emscripten::val props,
+                                                                            std::string path)
+{
+  std::unique_ptr<SquashFSBackend> sqFSBackend =
+      std::make_unique<SquashFSBackend>(props);
+  if (sqFSBackend->isInited())
+  {
+    backend_t backend = wasmFS.addBackend(std::move(sqFSBackend));
+    int ret = wasmfs_create_directory(const_cast<char*>(path.c_str()), 0777, backend);
+    if (ret != 0)
+      return false;
+    else
+      return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 EMSCRIPTEN_KEEPALIVE
 EMSCRIPTEN_BINDINGS(wasm_sqshfs)
 {
   emscripten::function("wasmfs_create_squashfs_backend_callback",
                        &wasmfs_create_squashfs_backend_callback);
+  emscripten::function("wasmfs_create_squashfs_backend_callback_and_mount",
+                       &wasmfs_create_squashfs_backend_callback_and_mount);
 };
