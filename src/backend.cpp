@@ -652,6 +652,11 @@ EMSCRIPTEN_KEEPALIVE void symlinkAsync(std::string oldPath, std::string newPath)
   __syscall_symlinkat((intptr_t)oldPath.c_str(), AT_FDCWD, (intptr_t)newPath.c_str());
 }
 
+EMSCRIPTEN_KEEPALIVE void mkdirAsync(std::string path, int mode)
+{
+  __syscall_mkdirat(AT_FDCWD, (intptr_t)path.c_str(), mode);
+}
+
 EMSCRIPTEN_KEEPALIVE
 EMSCRIPTEN_BINDINGS(wasm_sqshfs)
 {
@@ -667,4 +672,6 @@ EMSCRIPTEN_BINDINGS(wasm_sqshfs)
                        &readFileSignAsync);
   emscripten::function("symlinkAsync",
                        &symlinkAsync);
+  emscripten::function("mkdirAsync",
+                       &mkdirAsync);
 };
