@@ -15,9 +15,7 @@
 #include "sqfs/super.h"
 #include "sqfs/error.h"
 #include "wasmfs.h"
-#include <emscripten/val.h>
-#include <emscripten/wire.h>
-#include <emscripten/bind.h>
+#include <emscripten/atomic.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <syscall_arch.h>
@@ -27,28 +25,51 @@ using namespace wasmfs;
 namespace
 {
 
+  struct SharedMemMain
+  {
+    uint32_t nextFileIdToGet; // used as Mutex
+    bool crossOriginIsolated; // if not true, everything is preloaded.
+  };
+
+  struct SharedMemChunk
+  {
+    uint32_t read;    // alread read data, used as Mutex
+    uint32_t trigger; // position the fs is waiting for
+    uint8_t *data;    // nullptr if not read
+  };
+
+  struct SharedMemFile
+  {
+    uint32_t fileSize;          // also used as Mutex, 0 is not yet known
+    uint32_t fileId;            // id to identify the File
+    uint32_t chunkSize;         // usually set by C++ side, only in preloaded case not, also as Mutex, 0 is not yet known
+    uint32_t triggerChunkStart; // position the fs is waiting for
+    uint32_t triggerChunkEnd;   // position the fs is waiting for
+    SharedMemMain *mainStruct;  // pointer to main struct
+    SharedMemChunk *chunks;
+  };
+
   extern "C"
   {
     // helper functions for js based sqfs file, all heavily inspired by the original implementation of libsqfs
     typedef struct
     {
       sqfs_file_t base;
-      sqfs_u64 size;
-      emscripten::val callback; // index to js reading function
-    } sqfs_file_js_t;
+      SharedMemFile *memfile; // index to the memfile
+    } sqfs_file_memfile_t;
 
-    static void js_destroy(sqfs_object_t *base)
+    static void mem_destroy(sqfs_object_t *base)
     {
-      sqfs_file_js_t *file = (sqfs_file_js_t *)base;
+      sqfs_file_memfile_t *file = (sqfs_file_memfile_t *)base;
       free(file);
     }
 
-    static sqfs_object_t *js_copy(const sqfs_object_t *base)
+    static sqfs_object_t *mem_copy(const sqfs_object_t *base)
     {
-      const sqfs_file_js_t *file = (const sqfs_file_js_t *)base;
-      sqfs_file_js_t *copy;
+      const sqfs_file_memfile_t *file = (const sqfs_file_memfile_t *)base;
+      sqfs_file_memfile_t *copy;
       size_t size;
-      copy = (sqfs_file_js_t *)calloc(1, sizeof(*file));
+      copy = (sqfs_file_memfile_t *)calloc(1, sizeof(*file));
       if (copy == NULL)
         return NULL;
 
@@ -56,34 +77,143 @@ namespace
       return (sqfs_object_t *)copy;
     }
 
-    static int js_read_at(sqfs_file_t *base, sqfs_u64 offset,
-                          void *buffer, size_t size)
+    static sqfs_u64 mem_get_size(const sqfs_file_t *base)
     {
-      sqfs_file_js_t *file = (sqfs_file_js_t *)base;
+      const sqfs_file_memfile_t *file = (const sqfs_file_memfile_t *)base;
+      SharedMemFile *memFile = file->memfile;
+      if (memFile->fileSize == 0)
+      {
+        // unknown, we need to trigger a read and a wait
+        memFile->triggerChunkStart = 0; // we are only waiting for fileSize
+        memFile->triggerChunkEnd = 0;
+        // set the new val
+        emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
+        emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
+        // now we wait for fileSize
+        emscripten_atomic_wait_u32(&memFile->fileSize, 0, -1);
+      }
+      return memFile->fileSize;
+    }
 
-      if (offset + size > file->size)
+    static int mem_read_at(sqfs_file_t *base, sqfs_u64 offset,
+                           void *buffer, size_t size)
+    {
+      sqfs_file_memfile_t *file = (sqfs_file_memfile_t *)base;
+      SharedMemFile *memFile = file->memfile;
+
+      sqfs_u64 fileSize = mem_get_size(base);
+
+      if (offset + size > fileSize)
       {
         return SQFS_ERROR_OUT_OF_BOUNDS;
       }
+      if (memFile->chunkSize == 0)
+      {
+        // per convention the js side will always read the first  chunk and the ChunkSize
+        // we just need to wait
+        emscripten_atomic_wait_u32(&memFile->chunkSize, 0, -1);
+      }
+      uint32_t chunkSize = emscripten_atomic_load_u32(&memFile->chunkSize);
+      if (memFile->chunks == nullptr)
+      {
+        // ok wow got it, now we alloc the chunks
+        memFile->chunks = (SharedMemChunk *)calloc(fileSize / chunkSize, sizeof(SharedMemChunk));
+        emscripten_atomic_notify(&memFile->chunks, 1); // notify, if necessary
+      }
+      // now we figure out the chunks we need
+      uint32_t startChunk = offset / chunkSize;
+      uint32_t endChunk = (offset + size) / chunkSize;
+      uint32_t lastChunkBytes = (offset + size) % chunkSize;
+      if (lastChunkBytes == 0)
+      {
+        endChunk--;
+        lastChunkBytes = chunkSize;
+      }
+      // ok, now go through all chunks and see if all data is there
+      for (uint32_t chunk = startChunk; chunk < endChunk; chunk++)
+      {
+        // check if chunk has data
+        if (memFile->chunks[chunk].read != chunkSize)
+        {
+          // ok, we do not have data yet, figure out which chunks also need a fetch
+          uint32_t endfchunk = chunk;
+          for (uint32_t fchunk = chunk + 1; fchunk < endChunk; fchunk++)
+          {
+            if (memFile->chunks[fchunk].read == chunkSize)
+              break; // ok, this one was read
+            endfchunk = fchunk;
+          }
+          if (endfchunk == endChunk - 1)
+          {
+            if (memFile->chunks[endChunk].read < lastChunkBytes)
+            {
+              endfchunk = endChunk;
+            }
+          }
+          // now we got the area we need to fetch, first set our desired ranges
+          for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
+          {
+            memFile->chunks[gchunk].trigger = chunkSize;
+            if (memFile->chunks[gchunk].data == nullptr)
+            {
+              memFile->chunks[gchunk].data = (uint8_t *)malloc(chunkSize);
+            }
+          }
+          memFile->chunks[endfchunk].trigger = endfchunk == endChunk ? lastChunkBytes : chunkSize;
 
-      int ret = file->callback(offset, (uintptr_t)buffer, size).await().as<int>();
-      return ret;
+          // now tell, which the chunks are
+          memFile->triggerChunkStart = chunk;
+          memFile->triggerChunkEnd = endfchunk;
+          emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
+          emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
+          // now we wait for the trigger at the last chunk
+          uint32_t read = memFile->chunks[endfchunk].read;
+          while (read < memFile->chunks[endfchunk].trigger)
+          {
+            emscripten_atomic_wait_u32(&memFile->chunks[endfchunk].read, read, -1);
+            read = memFile->chunks[endfchunk].read;
+          }
+        }
+        uint32_t start = std::max((uint32_t)(offset - chunk * chunkSize), (uint32_t)0);
+        uint32_t cpysize = chunkSize - start;
+        memcpy(((uint8_t *)buffer), memFile->chunks[chunk].data + start, cpysize); // note that the loop runs < endChunk, so the last step is outside the loop
+      }
+      // fetch the last block
+      if (memFile->chunks[endChunk].read < lastChunkBytes) // note is uint, so zero or positive
+      {
+        memFile->chunks[endChunk].trigger = lastChunkBytes;
+        memFile->triggerChunkStart = endChunk;
+        memFile->triggerChunkEnd = endChunk;
+        if (memFile->chunks[endChunk].data == nullptr)
+        {
+          memFile->chunks[endChunk].data = (uint8_t *)malloc(chunkSize);
+        }
+        emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
+        emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
+        uint32_t read = memFile->chunks[endChunk].read;
+        while (read < memFile->chunks[endChunk].trigger)
+        {
+          emscripten_atomic_wait_u32(&memFile->chunks[endChunk].read, read, -1);
+          read = memFile->chunks[endChunk].read;
+          break;
+        }
+      }
+      {
+        uint32_t start = std::max((uint32_t)(offset - endChunk * chunkSize), (uint32_t)0);
+        uint32_t cpysize = lastChunkBytes - start;
+        memcpy(((uint8_t *)buffer), memFile->chunks[endChunk].data + start, cpysize);
+      }
+
+      return 0;
     }
 
-    static int js_write_at(sqfs_file_t *base, sqfs_u64 offset,
-                           const void *buffer, size_t size)
+    static int mem_write_at(sqfs_file_t *base, sqfs_u64 offset,
+                            const void *buffer, size_t size)
     {
       return SQFS_ERROR_IO; // only reading
     }
 
-    static sqfs_u64 js_get_size(const sqfs_file_t *base)
-    {
-      const sqfs_file_js_t *file = (const sqfs_file_js_t *)base;
-
-      return file->size;
-    }
-
-    static int js_truncate(sqfs_file_t *base, sqfs_u64 size)
+    static int mem_truncate(sqfs_file_t *base, sqfs_u64 size)
     {
       return SQFS_ERROR_UNSUPPORTED;
     }
@@ -117,7 +247,7 @@ namespace
       init(file);
     }
 
-    SquashFSBackend(emscripten::val props)
+    SquashFSBackend(SharedMemFile *memFile)
     {
       inited = false;
       fsFile = nullptr;
@@ -126,7 +256,7 @@ namespace
       dirReader = nullptr;
       inited = false;
       sqfs_file_t *file;
-      int ret = open_js(&file, props);
+      int ret = openMemFile(&file, memFile);
       if (ret != 0)
       {
         // TODO: How can I pass errors from the backend
@@ -235,31 +365,29 @@ namespace
     bool inited;
 
     // again a rewritten version of the squashfs original
-    int open_js(sqfs_file_t **out, emscripten::val props)
+    int openMemFile(sqfs_file_t **out, SharedMemFile *memfile)
     {
-      sqfs_file_js_t *file;
+      sqfs_file_memfile_t *file;
       size_t size, namelen;
       sqfs_file_t *base;
       int ret;
 
       *out = nullptr;
 
-      file = (sqfs_file_js_t *)calloc(1, sizeof(*file));
+      file = (sqfs_file_memfile_t *)calloc(1, sizeof(*file));
       base = (sqfs_file_t *)file;
       if (file == nullptr)
       {
         return SQFS_ERROR_ALLOC;
       }
-      file->size = props["size"].as<size_t>();
-      file->callback = props["callback"];
+      file->memfile = memfile;
+      base->read_at = mem_read_at;
+      base->write_at = mem_write_at;
+      base->get_size = mem_get_size;
+      base->truncate = mem_truncate;
 
-      base->read_at = js_read_at;
-      base->write_at = js_write_at;
-      base->get_size = js_get_size;
-      base->truncate = js_truncate;
-
-      ((sqfs_object_t *)base)->copy = js_copy;
-      ((sqfs_object_t *)base)->destroy = js_destroy;
+      ((sqfs_object_t *)base)->copy = mem_copy;
+      ((sqfs_object_t *)base)->destroy = mem_destroy;
 
       *out = base;
       return 0;
@@ -531,147 +659,39 @@ extern "C"
 
   // forward declaration
   int wasmfs_create_directory(char *path, int mode, backend_t backend);
-}
 
-EMSCRIPTEN_KEEPALIVE uintptr_t wasmfs_create_squashfs_backend_callback(emscripten::val props)
-{
-  std::unique_ptr<SquashFSBackend> sqFSBackend =
-      std::make_unique<SquashFSBackend>(props);
-  if (sqFSBackend->isInited())
+  EMSCRIPTEN_KEEPALIVE uintptr_t wasmfs_create_squashfs_backend_memfile(SharedMemFile *memfile)
   {
-    return (uintptr_t)wasmFS.addBackend(std::move(sqFSBackend)); //(uintptr_t)
-  }
-  else
-  {
-    return (uintptr_t)nullptr;
-  }
-}
-
-EMSCRIPTEN_KEEPALIVE bool wasmfs_create_squashfs_backend_callback_and_mount(emscripten::val props,
-                                                                            std::string path)
-{
-  std::unique_ptr<SquashFSBackend> sqFSBackend =
-      std::make_unique<SquashFSBackend>(props);
-  if (sqFSBackend->isInited())
-  {
-    backend_t backend = wasmFS.addBackend(std::move(sqFSBackend));
-    int ret = wasmfs_create_directory(const_cast<char *>(path.c_str()), 0777, backend);
-    if (ret != 0)
-      return false;
+    std::unique_ptr<SquashFSBackend> sqFSBackend =
+        std::make_unique<SquashFSBackend>(memfile);
+    if (sqFSBackend->isInited())
+    {
+      return (uintptr_t)wasmFS.addBackend(std::move(sqFSBackend)); //(uintptr_t)
+    }
     else
-      return true;
+    {
+      return (uintptr_t)nullptr;
+    }
   }
-  else
+
+  // may be strip if not necessary
+  EMSCRIPTEN_KEEPALIVE bool wasmfs_create_squashfs_backend_memfile_and_mount(SharedMemFile *memfile,
+                                                                             std::string path)
   {
-    return false;
+    std::unique_ptr<SquashFSBackend> sqFSBackend =
+        std::make_unique<SquashFSBackend>(memfile);
+    if (sqFSBackend->isInited())
+    {
+      backend_t backend = wasmFS.addBackend(std::move(sqFSBackend));
+      int ret = wasmfs_create_directory(const_cast<char *>(path.c_str()), 0777, backend);
+      if (ret != 0)
+        return false;
+      else
+        return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 }
-
-EMSCRIPTEN_KEEPALIVE emscripten::val readDirAsync(std::string path)
-{
-
-  struct dirent **entries;
-  int nentries = scandir(path.c_str(), &entries, NULL, alphasort);
-  if (nentries == -1)
-  {
-    return emscripten::val::undefined();
-  }
-  emscripten::val toret = emscripten::val::array();
-
-  for (int i = 0; i < nentries; i++)
-  {
-    toret.call<void>("push", std::string(entries[i]->d_name));
-  }
-  for (int i = 0; i < nentries; i++)
-  {
-    free(entries[i]);
-  }
-  free(entries);
-  return toret;
-}
-
-EMSCRIPTEN_KEEPALIVE emscripten::val findObjectAsync(std::string path)
-{
-
-  struct stat file;
-  int err = 0;
-  err = stat(path.c_str(), &file);
-  if (err < 0)
-  {
-    return emscripten::val::null();
-  }
-  emscripten::val toret = emscripten::val::object();
-  if (S_ISDIR(file.st_mode))
-  {
-    toret.set("isFolder", true);
-  }
-  else
-  {
-    toret.set("isFolder", false);
-  }
-  if (S_ISREG(file.st_mode))
-  {
-    toret.set("isFile", true);
-  }
-  else
-  {
-    toret.set("isFile", false);
-  }
-  if (S_ISLNK(file.st_mode))
-  {
-    toret.set("isLink", true);
-  }
-  else
-  {
-    toret.set("isLink", false);
-  }
-
-  return toret;
-}
-
-uint8_t fileSignature[4];
-
-EMSCRIPTEN_KEEPALIVE emscripten::val readFileSignAsync(std::string path)
-{
-  int fd = open(path.c_str(), O_RDONLY);
-  if (fd == -1)
-  {
-    return emscripten::val::null();
-  }
-  ssize_t bytesRead = read(fd, fileSignature, 4);
-  close(fd);
-  if (bytesRead == -1)
-  {
-    return emscripten::val::null();
-  }
-  return emscripten::val(emscripten::typed_memory_view(4, fileSignature));
-}
-
-EMSCRIPTEN_KEEPALIVE void symlinkAsync(std::string oldPath, std::string newPath)
-{
-  __syscall_symlinkat((intptr_t)oldPath.c_str(), AT_FDCWD, (intptr_t)newPath.c_str());
-}
-
-EMSCRIPTEN_KEEPALIVE void mkdirAsync(std::string path, int mode)
-{
-  __syscall_mkdirat(AT_FDCWD, (intptr_t)path.c_str(), mode);
-}
-
-EMSCRIPTEN_KEEPALIVE
-EMSCRIPTEN_BINDINGS(wasm_sqshfs)
-{
-  emscripten::function("wasmfs_create_squashfs_backend_callback",
-                       &wasmfs_create_squashfs_backend_callback);
-  emscripten::function("wasmfs_create_squashfs_backend_callback_and_mount",
-                       &wasmfs_create_squashfs_backend_callback_and_mount);
-  emscripten::function("readDirAsync",
-                       &readDirAsync);
-  emscripten::function("findObjectAsync",
-                       &findObjectAsync);
-  emscripten::function("readFileSignAsync",
-                       &readFileSignAsync);
-  emscripten::function("symlinkAsync",
-                       &symlinkAsync);
-  emscripten::function("mkdirAsync",
-                       &mkdirAsync);
-};
