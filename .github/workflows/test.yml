@@ -37,13 +37,13 @@ jobs:
         working-directory: ${{github.workspace}}/emscripten-wasm-squashfs/test
         run: |
           source ${{github.workspace}}/emscripten/emsdk_env.sh
-          ./run_test_gzip_cb.sh
+          ./run_test_gzip_sharedmem.sh
 
       - name: Build and run test for zstd with callback
         working-directory: ${{github.workspace}}/emscripten-wasm-squashfs/test
         run: |
           source ${{github.workspace}}/emscripten/emsdk_env.sh
-          ./run_test_zstd_cb.sh
+          ./run_test_zstd_sharedmem.sh
 
       - name: Build and run test for gzip
         working-directory: ${{github.workspace}}/emscripten-wasm-squashfs/test
