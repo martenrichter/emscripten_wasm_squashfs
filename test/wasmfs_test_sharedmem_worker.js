@@ -17,10 +17,8 @@ const waitAsync = async (pointer, expect) => {
 const fetchLoop = async () => {
   while (true) {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1));
       await waitAsync(sharedMemMain, 0); // TODO polyfill for older Firefoxes
       const nextFileIdToGet = sharedMemMainDv.getUint32(0, true);
-      await new Promise((resolve) => setTimeout(resolve, 1));
 
       sharedMemMainDv.setUint32(0, 0, true);
       const file = files[nextFileIdToGet];
@@ -42,10 +40,8 @@ const fetchLoop = async () => {
           const readRes = await fileHandle.read(header, 0, 16, 0);
           const headerDv = new DataView(header.buffer);
           const blockSize = headerDv.getUint32(12, true); // is equal to chunkSize
-          await new Promise((resolve) => setTimeout(resolve, 1));
           Atomics.store(heapI32, (sharedMemFile + 8) / 4, blockSize);
           Atomics.notify(heapI32, (sharedMemFile + 8) / 4, 1);
-          await new Promise((resolve) => setTimeout(resolve, 1));
           // now we have to wait, that chunks is set
           await waitAsync(sharedMemFile + 6 * 4);
           continue; // ok, done, the next fetch has to reset nextFileIdToGet
@@ -59,10 +55,8 @@ const fetchLoop = async () => {
           sharedMemFileDv.setUint32(12, 0, true);
           sharedMemFileDv.setUint32(16, 0, true);
           const chunksPtr = sharedMemFileDv.getUint32(24, true); // pointers seem to be different ?
-          await new Promise((resolve) => setTimeout(resolve, 1));
           // now do the fetching
           for (let chunk = startChunk; chunk <= endChunk; chunk++) {
-            await new Promise((resolve) => setTimeout(resolve, 1));
             const chunkPtr = chunk * 3 * 4 + chunksPtr;
             const chunkDv = new DataView(heap, chunkPtr, 3 * 4);
             const dataPtr = chunkDv.getUint32(8, true);
@@ -81,7 +75,6 @@ const fetchLoop = async () => {
       }
     } catch (error) {
       console.log("error:", error);
-      await new Promise((resolve) => setTimeout(resolve, 1)); // important to not block console.log by a busy loop
     }
   }
 };
