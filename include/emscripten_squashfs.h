@@ -1,4 +1,5 @@
 #include <emscripten/wasmfs.h>
+#include <string>
 
 extern "C"
 {
