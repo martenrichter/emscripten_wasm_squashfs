@@ -19,6 +19,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <syscall_arch.h>
+#include <list>
 
 using namespace wasmfs;
 
@@ -33,9 +34,9 @@ namespace
 
   struct SharedMemChunk
   {
-    uint32_t read;    // alread read data, used as Mutex
+    uint32_t read;    // already available data, used as Mutex
     uint32_t trigger; // position the fs is waiting for
-    uint8_t *data;    // nullptr if not read
+    uint8_t *data;    // nullptr if present
   };
 
   struct SharedMemFile
@@ -49,9 +50,114 @@ namespace
     SharedMemChunk *chunks;
   };
 
+  class MemBuffer
+  {
+  public:
+    MemBuffer(size_t desiredSize) : size(desiredSize), assignedChunk(nullptr)
+    {
+      data = (uint8_t *)malloc(desiredSize);
+      if (data == nullptr)
+        size = 0;
+    }
+
+    void unAssign()
+    {
+      SharedMemChunk *oldChunk = assignedChunk;
+      assignedChunk = nullptr;
+      oldChunk->data = nullptr; // do me need to add atomics
+      oldChunk->read = 0; // which does not mean, it is not buffered on the other side
+    }
+
+    bool
+    Assign(SharedMemChunk *newChunk)
+    {
+      if (size == 0 || data == nullptr)
+        return false;
+      if (assignedChunk)
+        unAssign();
+      assignedChunk = newChunk;
+#ifdef __wasm64__
+      emscripten_atomic_store_u64((uint64_t *)&assignedChunk->data, (uint64_t)data);
+#else
+      emscripten_atomic_store_u32((uint32_t *)&assignedChunk->data, (uint32_t)data);
+#endif
+      emscripten_atomic_notify(&assignedChunk->data, 1);
+      return true;
+    }
+
+    ~MemBuffer()
+    {
+      if (assignedChunk)
+        unAssign();
+      if (data)
+        free(data);
+    }
+
+    size_t Size()
+    {
+      return size;
+    }
+
+  protected:
+    uint8_t *data;
+    SharedMemChunk *assignedChunk;
+    size_t size;
+  };
+
+  class MemBuffers
+  {
+  public:
+    MemBuffers(size_t maxmem) : cache_mem(0), max_cache_mem(maxmem)
+    {
+    }
+
+    void tryGetBuffers(std::list<SharedMemChunk *> demand, size_t sizeBuf)
+    {
+      // First check, if can just create new buffers
+
+      // ok, we recycle and free
+      while (demand.size() * sizeBuf + cache_mem > max_cache_mem)
+      {
+        std::shared_ptr<MemBuffer> buffer = buffers.front();
+        buffers.pop_front();
+        if (buffer->Size() == sizeBuf)
+        { // ok, we recycle
+          SharedMemChunk *chunk = demand.front();
+          demand.pop_front();
+          buffer->Assign(chunk);
+          buffers.push_back(buffer);
+        }
+        else
+        {
+          cache_mem -= buffer->Size(); // just let it free
+        }
+      }
+
+      while (demand.size() > 0)
+      {
+        if (sizeBuf + cache_mem > max_cache_mem)
+          return; // sorry this is too much
+        std::shared_ptr<MemBuffer> buffer = std::make_shared<MemBuffer>(sizeBuf);
+        cache_mem += sizeBuf;
+        SharedMemChunk *chunk = demand.front();
+        demand.pop_front();
+        buffer->Assign(chunk);
+        buffers.push_back(buffer);
+      }
+    }
+
+  protected:
+    size_t cache_mem;
+    size_t max_cache_mem;
+    std::list<std::shared_ptr<MemBuffer>> buffers;
+  };
+
+  MemBuffers bufferPool(1024 * 1024); // one MByte buffer ?
+
   extern "C"
   {
     // helper functions for js based sqfs file, all heavily inspired by the original implementation of libsqfs
+
     typedef struct
     {
       sqfs_file_t base;
@@ -150,13 +256,29 @@ namespace
               endfchunk = endChunk;
             }
           }
-          // now we got the area we need to fetch, first set our desired ranges
+          // now we got the area we need to fetch
+          // first set our desired ranges
           for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
           {
             memFile->chunks[gchunk].trigger = chunkSize;
+          }
+          // second get buffers
+          std::list<SharedMemChunk *> toAlloc;
+          for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
+          {
             if (memFile->chunks[gchunk].data == nullptr)
             {
-              memFile->chunks[gchunk].data = (uint8_t *)malloc(chunkSize);
+              toAlloc.push_back(&memFile->chunks[gchunk]);
+            }
+          }
+          bufferPool.tryGetBuffers(toAlloc, chunkSize);
+          assert(memFile->chunks[chunk].data != nullptr);
+          // now adjust end fchunk
+          for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
+          {
+            if (memFile->chunks[gchunk].data == nullptr) {
+              endfchunk = gchunk;
+              break;
             }
           }
           memFile->chunks[endfchunk].trigger = endfchunk == endChunk ? lastChunkBytes : chunkSize;
@@ -186,6 +308,11 @@ namespace
         memFile->triggerChunkEnd = endChunk;
         if (memFile->chunks[endChunk].data == nullptr)
         {
+          std::list<SharedMemChunk *> toAlloc;
+          toAlloc.push_back(&memFile->chunks[endChunk]);
+          bufferPool.tryGetBuffers(toAlloc, chunkSize);
+        
+          assert(memFile->chunks[endChunk].data != nullptr);
           memFile->chunks[endChunk].data = (uint8_t *)malloc(chunkSize);
         }
         emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
