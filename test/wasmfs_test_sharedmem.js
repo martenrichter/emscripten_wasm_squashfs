@@ -17,7 +17,7 @@ Module.onRuntimeInitialized = async () => {
     sharedMemMainDv.setUint8(4, 1, true); // should be true for the test, crossOriginIsolated
     let curId = 1; // firstId
 
-    const sharedMemFile = Module._malloc(8 + 4 + 4 + 4 + 4 + 4 + 4);
+    const sharedMemFile = Module._malloc(4 + 4 + 4 + 4 + 4 + 4 + 4);
     const sharedMemFileDv = new DataView(
       Module.HEAPU8.buffer,
       sharedMemFile,

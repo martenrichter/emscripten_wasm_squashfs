@@ -65,7 +65,7 @@ namespace
       SharedMemChunk *oldChunk = assignedChunk;
       assignedChunk = nullptr;
       oldChunk->data = nullptr; // do me need to add atomics
-      oldChunk->read = 0; // which does not mean, it is not buffered on the other side
+      oldChunk->read = 0;       // which does not mean, it is not buffered on the other side
     }
 
     bool
@@ -223,7 +223,8 @@ namespace
       if (memFile->chunks == nullptr)
       {
         // ok wow got it, now we alloc the chunks
-        memFile->chunks = (SharedMemChunk *)calloc(fileSize / chunkSize, sizeof(SharedMemChunk));
+        size_t blockNum = (fileSize + chunkSize - 1) / chunkSize; // round down.
+        memFile->chunks = (SharedMemChunk *)calloc(blockNum, sizeof(SharedMemChunk));
         emscripten_atomic_notify(&memFile->chunks, 1); // notify, if necessary
       }
       // now we figure out the chunks we need
@@ -235,6 +236,7 @@ namespace
         endChunk--;
         lastChunkBytes = chunkSize;
       }
+      size_t destPtr = 0;
       // ok, now go through all chunks and see if all data is there
       for (uint32_t chunk = startChunk; chunk < endChunk; chunk++)
       {
@@ -276,7 +278,8 @@ namespace
           // now adjust end fchunk
           for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
           {
-            if (memFile->chunks[gchunk].data == nullptr) {
+            if (memFile->chunks[gchunk].data == nullptr)
+            {
               endfchunk = gchunk;
               break;
             }
@@ -296,9 +299,10 @@ namespace
             read = memFile->chunks[endfchunk].read;
           }
         }
-        uint32_t start = std::max((uint32_t)(offset - chunk * chunkSize), (uint32_t)0);
+        uint32_t start = (uint32_t)std::max((int32_t)(offset - chunk * chunkSize), (int32_t)0);
         uint32_t cpysize = chunkSize - start;
-        memcpy(((uint8_t *)buffer), memFile->chunks[chunk].data + start, cpysize); // note that the loop runs < endChunk, so the last step is outside the loop
+        memcpy(((uint8_t *)buffer) + destPtr, memFile->chunks[chunk].data + start, cpysize); // note that the loop runs < endChunk, so the last step is outside the loop
+        destPtr += cpysize;
       }
       // fetch the last block
       if (memFile->chunks[endChunk].read < lastChunkBytes) // note is uint, so zero or positive
@@ -311,7 +315,6 @@ namespace
           std::list<SharedMemChunk *> toAlloc;
           toAlloc.push_back(&memFile->chunks[endChunk]);
           bufferPool.tryGetBuffers(toAlloc, chunkSize);
-        
           assert(memFile->chunks[endChunk].data != nullptr);
           memFile->chunks[endChunk].data = (uint8_t *)malloc(chunkSize);
         }
@@ -326,9 +329,9 @@ namespace
         }
       }
       {
-        uint32_t start = std::max((uint32_t)(offset - endChunk * chunkSize), (uint32_t)0);
+        uint32_t start = (uint32_t)std::max((int32_t)(offset - endChunk * chunkSize), (int32_t)0);
         uint32_t cpysize = lastChunkBytes - start;
-        memcpy(((uint8_t *)buffer), memFile->chunks[endChunk].data + start, cpysize);
+        memcpy(((uint8_t *)buffer) + destPtr, memFile->chunks[endChunk].data + start, cpysize);
       }
 
       return 0;
