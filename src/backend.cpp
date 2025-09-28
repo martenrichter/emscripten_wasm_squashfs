@@ -292,11 +292,11 @@ namespace
           emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
           emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
           // now we wait for the trigger at the last chunk
-          uint32_t read = memFile->chunks[endfchunk].read;
+          uint32_t read = emscripten_atomic_load_u32(&memFile->chunks[endfchunk].read);
           while (read < memFile->chunks[endfchunk].trigger)
           {
             emscripten_atomic_wait_u32(&memFile->chunks[endfchunk].read, read, -1);
-            read = memFile->chunks[endfchunk].read;
+            read = emscripten_atomic_load_u32(&memFile->chunks[endfchunk].read);
           }
         }
         uint32_t start = (uint32_t)std::max((int32_t)(offset - chunk * chunkSize), (int32_t)0);
@@ -319,11 +319,11 @@ namespace
         }
         emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
         emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
-        uint32_t read = memFile->chunks[endChunk].read;
+        uint32_t read = emscripten_atomic_load_u32(&memFile->chunks[endChunk].read);
         while (read < memFile->chunks[endChunk].trigger)
         {
           emscripten_atomic_wait_u32(&memFile->chunks[endChunk].read, read, -1);
-          read = memFile->chunks[endChunk].read;
+          read = emscripten_atomic_load_u32(&memFile->chunks[endChunk].read);
           break;
         }
       }
