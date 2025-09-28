@@ -64,7 +64,7 @@ namespace
     {
       SharedMemChunk *oldChunk = assignedChunk;
       assignedChunk = nullptr;
-      oldChunk->data = nullptr; // do me need to add atomics
+      oldChunk->data = nullptr; // do we need to add atomics
       oldChunk->read = 0;       // which does not mean, it is not buffered on the other side
     }
 
@@ -260,13 +260,13 @@ namespace
           }
           // now we got the area we need to fetch
           // first set our desired ranges
-          for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
+          for (uint32_t gchunk = chunk; gchunk <= endfchunk; gchunk++)
           {
             memFile->chunks[gchunk].trigger = chunkSize;
           }
           // second get buffers
           std::list<SharedMemChunk *> toAlloc;
-          for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
+          for (uint32_t gchunk = chunk; gchunk <= endfchunk; gchunk++)
           {
             if (memFile->chunks[gchunk].data == nullptr)
             {
@@ -276,11 +276,11 @@ namespace
           bufferPool.tryGetBuffers(toAlloc, chunkSize);
           assert(memFile->chunks[chunk].data != nullptr);
           // now adjust end fchunk
-          for (uint32_t gchunk = chunk; gchunk < endfchunk; gchunk++)
+          for (uint32_t gchunk = chunk; gchunk <= endfchunk; gchunk++)
           {
             if (memFile->chunks[gchunk].data == nullptr)
             {
-              endfchunk = gchunk;
+              endfchunk = gchunk - 1;
               break;
             }
           }
@@ -316,7 +316,6 @@ namespace
           toAlloc.push_back(&memFile->chunks[endChunk]);
           bufferPool.tryGetBuffers(toAlloc, chunkSize);
           assert(memFile->chunks[endChunk].data != nullptr);
-          memFile->chunks[endChunk].data = (uint8_t *)malloc(chunkSize);
         }
         emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
         emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
