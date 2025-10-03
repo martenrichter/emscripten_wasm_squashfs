@@ -289,10 +289,10 @@ namespace
           // now tell, which the chunks are
           memFile->triggerChunkStart = chunk;
           memFile->triggerChunkEnd = endfchunk;
+          uint32_t read = emscripten_atomic_load_u32(&memFile->chunks[endfchunk].read);
           emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
           emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
           // now we wait for the trigger at the last chunk
-          uint32_t read = emscripten_atomic_load_u32(&memFile->chunks[endfchunk].read);
           while (read < memFile->chunks[endfchunk].trigger)
           {
             emscripten_atomic_wait_u32(&memFile->chunks[endfchunk].read, read, -1);
@@ -317,9 +317,9 @@ namespace
           bufferPool.tryGetBuffers(toAlloc, chunkSize);
           assert(memFile->chunks[endChunk].data != nullptr);
         }
+        uint32_t read = emscripten_atomic_load_u32(&memFile->chunks[endChunk].read);
         emscripten_atomic_store_u32(&memFile->mainStruct->nextFileIdToGet, memFile->fileId);
         emscripten_atomic_notify(&memFile->mainStruct->nextFileIdToGet, 1);
-        uint32_t read = emscripten_atomic_load_u32(&memFile->chunks[endChunk].read);
         while (read < memFile->chunks[endChunk].trigger)
         {
           emscripten_atomic_wait_u32(&memFile->chunks[endChunk].read, read, -1);
